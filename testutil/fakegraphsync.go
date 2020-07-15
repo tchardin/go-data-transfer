@@ -93,7 +93,7 @@ type FakeGraphSync struct {
 	IncomingBlockHook          graphsync.OnIncomingBlockHook
 	OutgoingBlockHook          graphsync.OnOutgoingBlockHook
 	IncomingRequestHook        graphsync.OnIncomingRequestHook
-	ResponseCompletedListener  graphsync.OnResponseCompletedListener
+	ResponseCompletedHook      graphsync.OnResponseCompletedHook
 	RequestUpdatedHook         graphsync.OnRequestUpdatedHook
 	IncomingResponseHook       graphsync.OnIncomingResponseHook
 	RequestorCancelledListener graphsync.OnRequestorCancelledListener
@@ -265,9 +265,9 @@ func (fgs *FakeGraphSync) RegisterRequestUpdatedHook(hook graphsync.OnRequestUpd
 	return nil
 }
 
-// RegisterCompletedResponseListener adds a listener on the responder for completed responses
-func (fgs *FakeGraphSync) RegisterCompletedResponseListener(listener graphsync.OnResponseCompletedListener) graphsync.UnregisterHookFunc {
-	fgs.ResponseCompletedListener = listener
+// RegisterCompletedResponseHook adds a hook on the responder for completed responses
+func (fgs *FakeGraphSync) RegisterCompletedResponseHook(hook graphsync.OnResponseCompletedHook) graphsync.UnregisterHookFunc {
+	fgs.ResponseCompletedHook = hook
 	return nil
 }
 
@@ -531,3 +531,13 @@ func (fa *FakeIncomingResponseHookActions) UpdateRequestWithExtensions(extension
 }
 
 var _ graphsync.IncomingResponseHookActions = &FakeIncomingResponseHookActions{}
+
+type FakeResponseCompletedHookActions struct {
+	SentExtension graphsync.ExtensionData
+}
+
+func (fa *FakeResponseCompletedHookActions) SendExtensionData(extension graphsync.ExtensionData) {
+	fa.SentExtension = extension
+}
+
+var _ graphsync.ResponseCompletedHookActions = &FakeResponseCompletedHookActions{}

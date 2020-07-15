@@ -679,24 +679,25 @@ func TestManager(t *testing.T) {
 			incoming := testutil.NewDTResponse(t, transferID)
 			transport := NewTransport(peers[0], fgs)
 			gsData := &harness{
-				ctx:                         ctx,
-				outgoing:                    outgoing,
-				incoming:                    incoming,
-				transport:                   transport,
-				fgs:                         fgs,
-				self:                        peers[0],
-				transferID:                  transferID,
-				other:                       peers[1],
-				request:                     request,
-				response:                    response,
-				updatedRequest:              updatedRequest,
-				block:                       block,
-				outgoingRequestHookActions:  &testutil.FakeOutgoingRequestHookActions{},
-				outgoingBlockHookActions:    &testutil.FakeOutgoingBlockHookActions{},
-				incomingBlockHookActions:    &testutil.FakeIncomingBlockHookActions{},
-				incomingRequestHookActions:  &testutil.FakeIncomingRequestHookActions{},
-				requestUpdatedHookActions:   &testutil.FakeRequestUpdatedActions{},
-				incomingResponseHookActions: &testutil.FakeIncomingResponseHookActions{},
+				ctx:                          ctx,
+				outgoing:                     outgoing,
+				incoming:                     incoming,
+				transport:                    transport,
+				fgs:                          fgs,
+				self:                         peers[0],
+				transferID:                   transferID,
+				other:                        peers[1],
+				request:                      request,
+				response:                     response,
+				updatedRequest:               updatedRequest,
+				block:                        block,
+				outgoingRequestHookActions:   &testutil.FakeOutgoingRequestHookActions{},
+				outgoingBlockHookActions:     &testutil.FakeOutgoingBlockHookActions{},
+				incomingBlockHookActions:     &testutil.FakeIncomingBlockHookActions{},
+				incomingRequestHookActions:   &testutil.FakeIncomingRequestHookActions{},
+				requestUpdatedHookActions:    &testutil.FakeRequestUpdatedActions{},
+				incomingResponseHookActions:  &testutil.FakeIncomingResponseHookActions{},
+				responseCompletedHookActions: &testutil.FakeResponseCompletedHookActions{},
 			}
 			require.NoError(t, transport.SetEventHandler(&data.events))
 			if data.action != nil {
@@ -773,24 +774,25 @@ func (fe *fakeEvents) OnChannelCompleted(chid datatransfer.ChannelID, success bo
 }
 
 type harness struct {
-	outgoing                    message.DataTransferRequest
-	incoming                    message.DataTransferResponse
-	ctx                         context.Context
-	transport                   *Transport
-	fgs                         *testutil.FakeGraphSync
-	transferID                  datatransfer.TransferID
-	self                        peer.ID
-	other                       peer.ID
-	block                       graphsync.BlockData
-	request                     graphsync.RequestData
-	response                    graphsync.ResponseData
-	updatedRequest              graphsync.RequestData
-	outgoingRequestHookActions  *testutil.FakeOutgoingRequestHookActions
-	incomingBlockHookActions    *testutil.FakeIncomingBlockHookActions
-	outgoingBlockHookActions    *testutil.FakeOutgoingBlockHookActions
-	incomingRequestHookActions  *testutil.FakeIncomingRequestHookActions
-	requestUpdatedHookActions   *testutil.FakeRequestUpdatedActions
-	incomingResponseHookActions *testutil.FakeIncomingResponseHookActions
+	outgoing                     message.DataTransferRequest
+	incoming                     message.DataTransferResponse
+	ctx                          context.Context
+	transport                    *Transport
+	fgs                          *testutil.FakeGraphSync
+	transferID                   datatransfer.TransferID
+	self                         peer.ID
+	other                        peer.ID
+	block                        graphsync.BlockData
+	request                      graphsync.RequestData
+	response                     graphsync.ResponseData
+	updatedRequest               graphsync.RequestData
+	outgoingRequestHookActions   *testutil.FakeOutgoingRequestHookActions
+	incomingBlockHookActions     *testutil.FakeIncomingBlockHookActions
+	outgoingBlockHookActions     *testutil.FakeOutgoingBlockHookActions
+	incomingRequestHookActions   *testutil.FakeIncomingRequestHookActions
+	requestUpdatedHookActions    *testutil.FakeRequestUpdatedActions
+	incomingResponseHookActions  *testutil.FakeIncomingResponseHookActions
+	responseCompletedHookActions *testutil.FakeResponseCompletedHookActions
 }
 
 func (ha *harness) outgoingRequestHook() {
@@ -812,7 +814,7 @@ func (ha *harness) incomingResponseHOok() {
 	ha.fgs.IncomingResponseHook(ha.other, ha.response, ha.incomingResponseHookActions)
 }
 func (ha *harness) responseCompletedListener() {
-	ha.fgs.ResponseCompletedListener(ha.other, ha.request, ha.response.Status())
+	ha.fgs.ResponseCompletedHook(ha.other, ha.request, ha.response.Status(), ha.responseCompletedHookActions)
 }
 func (ha *harness) requestorCancelledListener() {
 	ha.fgs.RequestorCancelledListener(ha.other, ha.request)

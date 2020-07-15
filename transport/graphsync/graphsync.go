@@ -245,7 +245,7 @@ func (t *Transport) SetEventHandler(events transport.Events) error {
 	}
 	t.events = events
 	t.gs.RegisterIncomingRequestHook(t.gsReqRecdHook)
-	t.gs.RegisterCompletedResponseListener(t.gsCompletedResponseListener)
+	t.gs.RegisterCompletedResponseHook(t.gsCompletedResponseListener)
 	t.gs.RegisterIncomingBlockHook(t.gsIncomingBlockHook)
 	t.gs.RegisterOutgoingBlockHook(t.gsOutgoingBlockHook)
 	t.gs.RegisterOutgoingRequestHook(t.gsOutgoingRequestHook)
@@ -416,7 +416,7 @@ func (t *Transport) gsReqRecdHook(p peer.ID, request graphsync.RequestData, hook
 
 // gsCompletedResponseListener is a graphsync.OnCompletedResponseListener. We use it learn when the data transfer is complete
 // for the side that is responding to a graphsync request
-func (t *Transport) gsCompletedResponseListener(p peer.ID, request graphsync.RequestData, status graphsync.ResponseStatusCode) {
+func (t *Transport) gsCompletedResponseListener(p peer.ID, request graphsync.RequestData, status graphsync.ResponseStatusCode, hookActions graphsync.ResponseCompletedHookActions) {
 	t.dataLock.RLock()
 	chid, ok := t.graphsyncRequestMap[graphsyncKey{request.ID(), p}]
 	t.dataLock.RUnlock()
