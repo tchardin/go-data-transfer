@@ -81,9 +81,13 @@ type Events interface {
 	// - err == ErrPause - pause this request (only for new requests)
 	// - err == ErrResume - resume this request (only for update requests)
 	OnRequestReceived(chid datatransfer.ChannelID, msg message.DataTransferRequest) (message.DataTransferResponse, error)
-	// OnResponseCompleted is called when we finish sending data for the given channel ID
+	// OnChannelReceiveCompleted is called when we finish receiving data for the given channel ID
 	// Error returns are logged but otherwise have not effect
-	OnChannelCompleted(chid datatransfer.ChannelID, success bool) error
+	OnChannelReceiveCompleted(chid datatransfer.ChannelID, success bool) error
+	// OnChannelSendCompleted is called when we sending receiving data for the given channel ID
+	// Error returns are logged but otherwise have not effect
+	// Message is sent along the transport channel channel with the closing of the channel
+	OnChannelSendCompleted(chid datatransfer.ChannelID, success bool) (message.DataTransferMessage, error)
 }
 
 // Transport is the minimum interface that must be satisfied to serve as a datatransfer

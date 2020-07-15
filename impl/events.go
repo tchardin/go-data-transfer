@@ -140,30 +140,19 @@ func (m *manager) OnResponseReceived(chid datatransfer.ChannelID, response messa
 	return m.resumeOther(chid)
 }
 
-func (m *manager) OnChannelCompleted(chid datatransfer.ChannelID, success bool) error {
-	if success {
-		if chid.Initiator != m.peerID {
-			msg, err := m.completeMessage(chid)
-			if err != nil {
-				return nil
-			}
-			if msg != nil {
-				if err := m.dataTransferNetwork.SendMessage(context.TODO(), chid.Initiator, msg); err != nil {
-					_ = m.channels.Error(chid, err)
-					return err
-				}
-			}
-			if msg.Accepted() {
-				if msg.IsPaused() {
-					return m.channels.BeginFinalizing(chid)
-				}
-				return m.channels.Complete(chid)
-			}
-			return m.channels.Error(chid, err)
+func (m *manager) OnChannelReceiveCompleted(chid datatransfer.ChannelID, success bool) error {
+	msg, err := m.onChannelCompleted(chid, success)
+	if msg != nil {
+		if err := m.dataTransferNetwork.SendMessage(context.TODO(), chid.Initiator, msg); err != nil {
+			_ = m.channels.Error(chid, err)
+			return err
 		}
-		return m.channels.FinishTransfer(chid)
 	}
-	return m.channels.Error(chid, errors.New("incomplete response"))
+	return err
+}
+
+func (m *manager) OnChannelSendCompleted(chid datatransfer.ChannelID, success bool) (message.DataTransferMessage, error) {
+	return m.onChannelCompleted(chid, success)
 }
 
 func (m *manager) receiveNewRequest(
@@ -336,4 +325,25 @@ func (m *manager) completeMessage(chid datatransfer.ChannelID) (message.DataTran
 	return message.CompleteResponse(chid.ID,
 		resultErr == nil || resultErr == datatransfer.ErrPause,
 		resultErr == datatransfer.ErrPause, vtype, result)
+}
+
+func (m *manager) onChannelCompleted(chid datatransfer.ChannelID, success bool) (message.DataTransferMessage, error) {
+	if success {
+		if chid.Initiator != m.peerID {
+			msg, err := m.completeMessage(chid)
+			if err != nil {
+				return nil, err
+			}
+			if msg.Accepted() {
+				if msg.IsPaused() {
+					return msg, m.channels.BeginFinalizing(chid)
+				}
+				return msg, m.channels.Complete(chid)
+			}
+			return msg, m.channels.Error(chid, err)
+		}
+		return nil, m.channels.FinishTransfer(chid)
+	}
+	return nil, m.channels.Error(chid, errors.New("incomplete response"))
+
 }

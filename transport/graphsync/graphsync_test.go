@@ -481,8 +481,26 @@ func TestManager(t *testing.T) {
 			},
 			check: func(t *testing.T, events *fakeEvents, gsData *harness) {
 				require.Equal(t, 1, events.OnRequestReceivedCallCount)
-				require.True(t, events.OnChannelCompletedCalled)
-				require.True(t, events.ChannelCompletedSuccess)
+				require.True(t, events.OnChannelSendCompletedCalled)
+				require.True(t, events.ChannelSendCompletedSuccess)
+			},
+		},
+		"recognized incoming request will record successful request completion with message": {
+			responseConfig: gsResponseConfig{
+				status: graphsync.RequestCompletedFull,
+			},
+			events: fakeEvents{
+				ChannelSendCompletedMessage: testutil.NewDTResponse(t, datatransfer.TransferID(rand.Uint64())),
+			},
+			action: func(gsData *harness) {
+				gsData.incomingRequestHook()
+				gsData.responseCompletedListener()
+			},
+			check: func(t *testing.T, events *fakeEvents, gsData *harness) {
+				require.Equal(t, 1, events.OnRequestReceivedCallCount)
+				require.True(t, events.OnChannelSendCompletedCalled)
+				require.True(t, events.ChannelSendCompletedSuccess)
+				assertHasOutgoingMessage(t, []graphsync.ExtensionData{gsData.responseCompletedHookActions.SentExtension}, events.ChannelSendCompletedMessage)
 			},
 		},
 		"recognized incoming request will record unsuccessful request completion": {
@@ -495,8 +513,8 @@ func TestManager(t *testing.T) {
 			},
 			check: func(t *testing.T, events *fakeEvents, gsData *harness) {
 				require.Equal(t, 1, events.OnRequestReceivedCallCount)
-				require.True(t, events.OnChannelCompletedCalled)
-				require.False(t, events.ChannelCompletedSuccess)
+				require.True(t, events.OnChannelSendCompletedCalled)
+				require.False(t, events.ChannelReceiveCompletedSuccess)
 			},
 		},
 		"recognized incoming request will not record request cancellation": {
@@ -509,7 +527,7 @@ func TestManager(t *testing.T) {
 			},
 			check: func(t *testing.T, events *fakeEvents, gsData *harness) {
 				require.Equal(t, 1, events.OnRequestReceivedCallCount)
-				require.False(t, events.OnChannelCompletedCalled)
+				require.False(t, events.OnChannelSendCompletedCalled)
 			},
 		},
 		"non-data-transfer request will not record request completed": {
@@ -525,7 +543,7 @@ func TestManager(t *testing.T) {
 			},
 			check: func(t *testing.T, events *fakeEvents, gsData *harness) {
 				require.Equal(t, 0, events.OnRequestReceivedCallCount)
-				require.False(t, events.OnChannelCompletedCalled)
+				require.False(t, events.OnChannelSendCompletedCalled)
 			},
 		},
 		"recognized incoming request can be closed": {
@@ -709,25 +727,29 @@ func TestManager(t *testing.T) {
 }
 
 type fakeEvents struct {
-	ChannelOpenedChannelID      datatransfer.ChannelID
-	RequestReceivedChannelID    datatransfer.ChannelID
-	ResponseReceivedChannelID   datatransfer.ChannelID
-	OnChannelOpenedError        error
-	OnDataReceivedCalled        bool
-	OnDataReceivedError         error
-	OnDataSentCalled            bool
-	OnDataSentError             error
-	OnRequestReceivedCallCount  int
-	OnRequestReceivedErrors     []error
-	OnResponseReceivedCallCount int
-	OnResponseReceivedErrors    []error
-	OnChannelCompletedCalled    bool
-	OnChannelCompletedErr       error
-	ChannelCompletedSuccess     bool
-	DataSentMessage             message.DataTransferMessage
-	RequestReceivedRequest      message.DataTransferRequest
-	RequestReceivedResponse     message.DataTransferResponse
-	ResponseReceivedResponse    message.DataTransferResponse
+	ChannelOpenedChannelID          datatransfer.ChannelID
+	RequestReceivedChannelID        datatransfer.ChannelID
+	ResponseReceivedChannelID       datatransfer.ChannelID
+	OnChannelOpenedError            error
+	OnDataReceivedCalled            bool
+	OnDataReceivedError             error
+	OnDataSentCalled                bool
+	OnDataSentError                 error
+	OnRequestReceivedCallCount      int
+	OnRequestReceivedErrors         []error
+	OnResponseReceivedCallCount     int
+	OnResponseReceivedErrors        []error
+	OnChannelReceiveCompletedCalled bool
+	OnChannelReceiveCompletedErr    error
+	ChannelReceiveCompletedSuccess  bool
+	OnChannelSendCompletedCalled    bool
+	OnChannelSendCompletedErr       error
+	ChannelSendCompletedSuccess     bool
+	ChannelSendCompletedMessage     message.DataTransferMessage
+	DataSentMessage                 message.DataTransferMessage
+	RequestReceivedRequest          message.DataTransferRequest
+	RequestReceivedResponse         message.DataTransferResponse
+	ResponseReceivedResponse        message.DataTransferResponse
 }
 
 func (fe *fakeEvents) OnChannelOpened(chid datatransfer.ChannelID) error {
@@ -767,10 +789,15 @@ func (fe *fakeEvents) OnResponseReceived(chid datatransfer.ChannelID, response m
 	return err
 }
 
-func (fe *fakeEvents) OnChannelCompleted(chid datatransfer.ChannelID, success bool) error {
-	fe.OnChannelCompletedCalled = true
-	fe.ChannelCompletedSuccess = success
-	return fe.OnChannelCompletedErr
+func (fe *fakeEvents) OnChannelReceiveCompleted(chid datatransfer.ChannelID, success bool) error {
+	fe.OnChannelReceiveCompletedCalled = true
+	fe.ChannelReceiveCompletedSuccess = success
+	return fe.OnChannelReceiveCompletedErr
+}
+func (fe *fakeEvents) OnChannelSendCompleted(chid datatransfer.ChannelID, success bool) (message.DataTransferMessage, error) {
+	fe.OnChannelSendCompletedCalled = true
+	fe.ChannelSendCompletedSuccess = success
+	return fe.ChannelSendCompletedMessage, fe.OnChannelSendCompletedErr
 }
 
 type harness struct {

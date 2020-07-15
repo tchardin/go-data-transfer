@@ -105,7 +105,7 @@ func (t *Transport) consumeResponses(ctx context.Context, errChan <-chan error) 
 func (t *Transport) executeGsRequest(ctx context.Context, channelID datatransfer.ChannelID, errChan <-chan error) {
 	lastError := t.consumeResponses(ctx, errChan)
 	if _, ok := lastError.(graphsync.RequestCancelledErr); !ok {
-		err := t.events.OnChannelCompleted(channelID, lastError == nil)
+		err := t.events.OnChannelReceiveCompleted(channelID, lastError == nil)
 		if err != nil {
 			log.Error(err)
 		}
@@ -427,9 +427,17 @@ func (t *Transport) gsCompletedResponseListener(p peer.ID, request graphsync.Req
 
 	if status != graphsync.RequestCancelled {
 		success := status == graphsync.RequestCompletedFull
-		err := t.events.OnChannelCompleted(chid, success)
+		msg, err := t.events.OnChannelSendCompleted(chid, success)
 		if err != nil {
 			log.Error(err)
+		}
+		if msg != nil {
+			extension, err := extension.ToExtensionData(msg)
+			if err != nil {
+				log.Error(err)
+			} else {
+				hookActions.SendExtensionData(extension)
+			}
 		}
 	}
 	t.dataLock.Lock()
