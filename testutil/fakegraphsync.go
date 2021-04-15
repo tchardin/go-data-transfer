@@ -88,8 +88,7 @@ type CancelResponse struct {
 }
 
 type PersistenceOption struct {
-	ipld.Loader
-	ipld.Storer
+	ipld.LinkSystem
 }
 
 // FakeGraphSync implements a GraphExchange but does nothing
@@ -259,14 +258,14 @@ func (fgs *FakeGraphSync) Request(ctx context.Context, p peer.ID, root ipld.Link
 }
 
 // RegisterPersistenceOption registers an alternate loader/storer combo that can be substituted for the default
-func (fgs *FakeGraphSync) RegisterPersistenceOption(name string, loader ipld.Loader, storer ipld.Storer) error {
+func (fgs *FakeGraphSync) RegisterPersistenceOption(name string, lsys ipld.LinkSystem) error {
 	fgs.persistenceOptionsLk.Lock()
 	defer fgs.persistenceOptionsLk.Unlock()
 	_, ok := fgs.persistenceOptions[name]
 	if ok {
 		return errors.New("already registered")
 	}
-	fgs.persistenceOptions[name] = PersistenceOption{Loader: loader, Storer: storer}
+	fgs.persistenceOptions[name] = PersistenceOption{lsys}
 	return nil
 }
 

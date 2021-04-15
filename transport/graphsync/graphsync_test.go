@@ -874,13 +874,15 @@ func TestManager(t *testing.T) {
 		},
 		"UseStore can change store used for outgoing requests": {
 			action: func(gsData *harness) {
-				loader := func(ipld.Link, ipld.LinkContext) (io.Reader, error) {
+				lsys := cidlink.DefaultLinkSystem()
+				lsys.TrustedStorage = true
+				lsys.StorageReadOpener = func(lnkCtx ipld.LinkContext, lnk ipld.Link) (io.Reader, error) {
 					return nil, nil
 				}
-				storer := func(ipld.LinkContext) (io.Writer, ipld.StoreCommitter, error) {
+				lsys.StorageWriteOpener = func(lnkCtx ipld.LinkContext) (io.Writer, ipld.BlockWriteCommitter, error) {
 					return nil, nil, nil
 				}
-				_ = gsData.transport.UseStore(datatransfer.ChannelID{ID: gsData.transferID, Responder: gsData.other, Initiator: gsData.self}, loader, storer)
+				_ = gsData.transport.UseStore(datatransfer.ChannelID{ID: gsData.transferID, Responder: gsData.other, Initiator: gsData.self}, lsys)
 				gsData.outgoingRequestHook()
 			},
 			check: func(t *testing.T, events *fakeEvents, gsData *harness) {
@@ -893,13 +895,15 @@ func TestManager(t *testing.T) {
 		},
 		"UseStore can change store used for incoming requests": {
 			action: func(gsData *harness) {
-				loader := func(ipld.Link, ipld.LinkContext) (io.Reader, error) {
+				lsys := cidlink.DefaultLinkSystem()
+				lsys.TrustedStorage = true
+				lsys.StorageReadOpener = func(lnkCtx ipld.LinkContext, lnk ipld.Link) (io.Reader, error) {
 					return nil, nil
 				}
-				storer := func(ipld.LinkContext) (io.Writer, ipld.StoreCommitter, error) {
+				lsys.StorageWriteOpener = func(lnkCtx ipld.LinkContext) (io.Writer, ipld.BlockWriteCommitter, error) {
 					return nil, nil, nil
 				}
-				_ = gsData.transport.UseStore(datatransfer.ChannelID{ID: gsData.transferID, Responder: gsData.self, Initiator: gsData.other}, loader, storer)
+				_ = gsData.transport.UseStore(datatransfer.ChannelID{ID: gsData.transferID, Responder: gsData.self, Initiator: gsData.other}, lsys)
 				gsData.incomingRequestHook()
 			},
 			check: func(t *testing.T, events *fakeEvents, gsData *harness) {

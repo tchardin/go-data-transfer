@@ -348,14 +348,14 @@ func (t *Transport) Shutdown(ctx context.Context) error {
 }
 
 // UseStore tells the graphsync transport to use the given loader and storer for this channelID
-func (t *Transport) UseStore(channelID datatransfer.ChannelID, loader ipld.Loader, storer ipld.Storer) error {
+func (t *Transport) UseStore(channelID datatransfer.ChannelID, lsys ipld.LinkSystem) error {
 	t.dataLock.Lock()
 	defer t.dataLock.Unlock()
 	_, ok := t.stores[channelID]
 	if ok {
 		return nil
 	}
-	err := t.gs.RegisterPersistenceOption("data-transfer-"+channelID.String(), loader, storer)
+	err := t.gs.RegisterPersistenceOption("data-transfer-"+channelID.String(), lsys)
 	if err != nil {
 		return err
 	}
